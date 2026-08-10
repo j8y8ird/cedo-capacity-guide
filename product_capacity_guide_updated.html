@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Capacity Planning Guide — ERP / Workday CEDO</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: #F0F4F9; color: #1A1A1A; min-height: 100vh; padding-bottom: 64px; }
+
+  /* ── LAYOUT ─────────────────────────────────────── */
+  .header { background: #102E41; padding: 36px 40px 32px; margin-bottom: 32px; }
+  .header-inner { max-width: 980px; margin: 0 auto; }
+  .eyebrow { font-size: 11px; font-family: monospace; color: #72EDBB; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 10px; }
+  .header h1 { font-family: 'DM Serif Display', Georgia, serif; font-size: 30px; font-weight: 400; color: #fff; line-height: 1.25; margin-bottom: 12px; }
+  .header h1 span { color: #00A854; }
+  .header-sub { font-size: 13px; color: #94A3B8; line-height: 1.7; max-width: 640px; }
+  .main { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── TAB NAV ─────────────────────────────────────── */
+  .tab-nav { display: flex; gap: 4px; margin-bottom: 24px; background: #E2E8F0; border-radius: 8px; padding: 4px; flex-wrap: wrap; }
+  .tab-btn { flex: 1; min-width: 90px; padding: 9px 10px; border-radius: 6px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; transition: all 0.2s; background: transparent; color: #666; white-space: nowrap; }
+  .tab-btn.active { background: #102E41; color: #fff; font-weight: 600; }
+
+  /* ── HEADINGS ────────────────────────────────────── */
+  .section-title { font-family: 'DM Serif Display', Georgia, serif; font-size: 20px; font-weight: 400; color: #102E41; margin-bottom: 6px; }
+  .section-sub { font-size: 12px; color: #666; line-height: 1.7; margin-bottom: 20px; }
+
+  /* ── LANE CARDS ──────────────────────────────────── */
+  .lane-cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .lane-card { border-radius: 8px; background: #FAFBFC; border: 1.5px solid #E2E8F0; overflow: hidden; }
+  .lane-card-header { padding: 16px 20px; cursor: pointer; display: flex; align-items: flex-start; gap: 16px; }
+  .lane-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; font-weight: 700; font-size: 11px; font-family: monospace; }
+  .lane-meta { flex: 1; min-width: 0; }
+  .lane-name { font-family: 'DM Serif Display', Georgia, serif; font-size: 15px; color: #102E41; margin-bottom: 4px; }
+  .lane-stats { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 10px; }
+  .stat-item { display: flex; flex-direction: column; }
+  .stat-label { font-size: 10px; color: #888; margin-bottom: 1px; }
+  .stat-value { font-size: 18px; font-weight: 800; font-family: 'DM Serif Display', serif; color: #102E41; }
+  .split-bar-wrap { margin-bottom: 4px; }
+  .split-bar-label { font-size: 10px; color: #888; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .split-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; }
+  .lane-card-body { padding: 0 20px 16px 76px; border-top: 1px solid #E2E8F020; display: none; }
+  .lane-card-body.open { display: block; }
+  .lead-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; margin-top: 12px; }
+  .lt-box { border-radius: 6px; padding: 12px; }
+  .lt-box-label { font-size: 10px; color: #888; margin-bottom: 4px; }
+  .lt-box-value { font-size: 22px; font-weight: 800; font-family: 'DM Serif Display', serif; }
+  .lt-box-value span { font-size: 12px; font-weight: 400; }
+  .lt-box-note { font-size: 10px; color: #888; margin-top: 4px; }
+  .lane-components { font-size: 10px; color: #666; line-height: 1.6; }
+  .lane-note { margin-top: 6px; font-style: italic; font-size: 10px; }
+
+  /* ── SUMMARY BAR ─────────────────────────────────── */
+  .summary-bar { background: #102E41; border-radius: 8px; padding: 16px 20px; display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+  .summary-main { flex: 1; min-width: 200px; }
+  .summary-label { font-size: 11px; color: #94A3B8; margin-bottom: 4px; }
+  .summary-value { font-family: 'DM Serif Display', serif; font-size: 28px; font-weight: 400; color: #00A854; }
+  .summary-breakdown { font-size: 11px; color: #64748B; margin-top: 2px; }
+  .summary-note { font-size: 12px; color: #94A3B8; max-width: 340px; line-height: 1.6; }
+
+  /* ── FORECAST SHARED ─────────────────────────────── */
+  .calc-box { background: #FAFBFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 24px; }
+  .calc-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: #102E41; margin-bottom: 4px; }
+  .calc-sub { font-size: 12px; color: #666; line-height: 1.5; margin-bottom: 16px; }
+  .calc-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .calc-field label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .calc-field input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1.5px solid #E2E8F0; font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; background: #fff; transition: border-color 0.2s; }
+  .calc-field input:focus { border-color: #102E41; }
+  .calc-results { display: flex; flex-direction: column; gap: 10px; }
+  .result-card { border-radius: 8px; padding: 12px 16px; border-left-width: 4px; border-left-style: solid; border-top: 1px solid transparent; border-right: 1px solid transparent; border-bottom: 1px solid transparent; }
+  .result-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .result-lane { font-weight: 700; font-size: 13px; color: #102E41; }
+  .result-rate { font-size: 12px; color: #666; margin-left: 8px; }
+  .result-status { font-size: 11px; font-weight: 700; text-align: right; }
+  .result-metrics { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 8px; }
+  .result-metric .label { font-size: 10px; color: #888; }
+  .result-metric .value { font-size: 20px; font-weight: 800; font-family: 'DM Serif Display', serif; color: #102E41; }
+  .result-metric .value span { font-size: 11px; font-weight: 400; }
+  .progress-track { height: 8px; border-radius: 4px; overflow: hidden; background: #E8ECF2; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .calc-empty { text-align: center; padding: 40px 20px; color: #999; font-size: 13px; }
+
+  /* ── FORECAST MODE TOGGLE ────────────────────────── */
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 20px; }
+  .mode-btn { padding: 8px 16px; border-radius: 6px; border: 1.5px solid #E2E8F0; background: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; color: #555; transition: all 0.2s; }
+  .mode-btn.active { background: #102E41; color: #fff; border-color: #102E41; }
+
+  /* ── COMPONENT SECTION HEADER ────────────────────── */
+  .comp-section { margin-bottom: 28px; }
+  .comp-lane-header { border-radius: 8px 8px 0 0; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .comp-lane-badge { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 10px; font-family: monospace; flex-shrink: 0; background: rgba(255,255,255,0.15); }
+  .comp-lane-info { flex: 1; }
+  .comp-lane-name { font-family: 'DM Serif Display', serif; font-size: 16px; color: #fff; }
+  .comp-lane-stats { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+  /* ── COMPONENT TABLE ─────────────────────────────── */
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 12px; border-radius: 0 0 8px 8px; overflow: hidden; }
+  .comp-table th { background: #F0EEEC; color: #444; padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .comp-table td { padding: 9px 10px; border-bottom: 1px solid #E8ECF2; vertical-align: top; background: #fff; }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table tr:nth-child(even) td { background: #FAFBFC; }
+  .comp-name { font-weight: 600; color: #102E41; font-size: 12px; }
+  .comp-planning-note { font-size: 10px; color: #888; font-style: italic; margin-top: 2px; }
+  .comp-bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .comp-mini-bar { flex: 1; height: 6px; border-radius: 3px; background: #E8ECF2; overflow: hidden; }
+  .comp-mini-fill { height: 100%; border-radius: 3px; }
+  .comp-pct { font-size: 10px; color: #888; min-width: 28px; }
+  .coverage-count { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #555; }
+  .cov-dot { width: 8px; height: 8px; border-radius: 50%; background: #102E41; display: inline-block; }
+  .comp-intro { font-size: 12px; color: #555; line-height: 1.6; margin-bottom: 16px; background: #fff; border: 1.5px solid #E2E8F0; border-radius: 8px; padding: 14px 16px; }
+
+  /* ── COMPONENT FORECAST ──────────────────────────── */
+  .comp-forecast-grid { display: flex; flex-direction: column; gap: 24px; }
+  .comp-forecast-section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
+  .comp-forecast-lane-hdr { padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .comp-forecast-lane-badge { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 10px; font-family: monospace; }
+  .comp-forecast-lane-name { font-family: 'DM Serif Display', serif; font-size: 15px; color: #fff; }
+  .comp-forecast-body { padding: 16px; }
+  .comp-input-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .comp-input-item label { font-size: 10px; font-weight: 600; color: #444; display: block; margin-bottom: 3px; }
+  .comp-input-item .comp-meta { font-size: 9px; color: #999; margin-bottom: 4px; }
+  .comp-input-item input { width: 100%; padding: 6px 10px; border-radius: 6px; border: 1.5px solid #E2E8F0; font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; background: #fff; }
+  .comp-input-item input:focus { border-color: #102E41; }
+  .comp-result-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; }
+  .comp-result-name { font-size: 11px; font-weight: 600; color: #102E41; min-width: 200px; }
+  .comp-result-bar-wrap { flex: 1; }
+  .comp-result-bar-track { height: 8px; border-radius: 4px; background: #E8ECF2; overflow: hidden; }
+  .comp-result-bar-fill { height: 100%; border-radius: 4px; }
+  .comp-result-stats { font-size: 10px; color: #666; white-space: nowrap; min-width: 160px; text-align: right; }
+  .comp-result-status { font-size: 10px; font-weight: 700; min-width: 90px; text-align: right; }
+  .comp-lane-total-row { background: #F0EEEC; border-radius: 6px; padding: 8px 10px; display: flex; gap: 16px; align-items: center; font-size: 11px; font-weight: 600; color: #102E41; margin-top: 8px; }
+  .band-pill { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 9px; font-weight: 600; }
+
+  /* ── PATTERNS TABLE ──────────────────────────────── */
+  .patterns-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .patterns-table th { background: #102E41; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; }
+  .patterns-table td { padding: 8px 10px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+  .patterns-table tr:nth-child(even) td { background: #F8FAFB; }
+  .var-pill { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+
+  /* ── CONCEPTS ────────────────────────────────────── */
+  .concept-cards { display: flex; flex-direction: column; gap: 12px; }
+  .concept-card { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 8px; padding: 16px 20px; }
+  .concept-title { font-family: 'DM Serif Display', serif; font-size: 15px; color: #102E41; margin-bottom: 6px; }
+  .concept-body { font-size: 12px; color: #555; line-height: 1.7; }
+
+  /* ── SIZING ──────────────────────────────────────── */
+  .sizing-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
+  .sizing-table th { background: #102E41; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; }
+  .sizing-table td { padding: 8px 10px; border-bottom: 1px solid #E2E8F0; vertical-align: top; }
+  .sizing-table tr:nth-child(even) td { background: #F8FAFB; }
+  .sizing-note { font-size: 12px; color: #555; line-height: 1.7; padding: 14px 16px; background: #fff; border: 1.5px solid #E2E8F0; border-radius: 8px; }
+
+  @media (max-width: 600px) {
+    .header { padding: 24px 20px 20px; }
+    .main { padding: 0 16px; }
+    .calc-inputs { grid-template-columns: 1fr; }
+    .lead-time-grid { grid-template-columns: 1fr; }
+    .lane-card-body { padding-left: 20px; }
+    .tab-btn { font-size: 10px; padding: 8px 6px; }
+    .comp-input-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ================================================================
+   QUARTERLY DATA — UPDATE EACH QUARTER
+   Source: Rolling 90-Day Baseline tab in Flow Metrics workbook
+   Q2 2026: Apr 1 - Jun 30, 2026 | 271 completed tickets
+   ================================================================ */
+const DATA = {
+  quarterLabel: "Q2 2026 (Apr 1 – Jun 30, 2026)",
+  totalTickets: 271,
+  planWeeks: 12,
+  attributionNote: "Initiative classification uses parent epic PI Quarter and PI Commitment Status fields. 48 canceled tickets excluded from all counts.",
+
+  lanes: [
+    { id:"hcm",  name:"HCM",  full:"Human Capital Management", total:101, support:40, supportPct:40, initiative:30, weeklyRate:8.4, medianDays:14, p85Days:67,  color:"#1F6E5C", light:"#E8F5F0",
+      components:"HR-Core HCM, HR-Recruiting, HR-Talent Management, HR-Compensation, HR-Benefits",
+      note:"HCM carries the largest initiative volume in Q2 - 30 tickets across Committed and Q2 Planned epics. At 8.4 tickets/week, the P85 of 67 business days should anchor any HCM initiative commitment in Q3." },
+    { id:"fin",  name:"FIN",  full:"Finance",                   total:67,  support:28, supportPct:42, initiative:6,  weeklyRate:5.6, medianDays:2,  p85Days:37,  color:"#1F4E8C", light:"#E8EEF8",
+      components:"FIN-AP Supplier & Invoicing, FIN-Financial Accounting and FDM, FIN-Overall Core Finance, FIN-Expenses, PR-Procurement/WSS, FIN-WD Adaptive, FIN-Customers, FIN-Supplier Accounts",
+      note:"FIN has only 6 confirmed initiative tickets in Q2. 33 tickets are Gray Zone awaiting classification. Do not plan against FIN capacity without confirming how Gray Zone resolves before Q3 PI." },
+    { id:"pay",  name:"PAY",  full:"Payroll",                   total:21,  support:14, supportPct:67, initiative:3,  weeklyRate:1.8, medianDays:21, p85Days:52,  color:"#7B3F9E", light:"#F0E8F8",
+      components:"HR-Payroll, HR-Time Tracking, HR-Absence Management",
+      note:"Payroll is a constrained lane at 1.8 tickets/week. P85 of 52 business days means any Q3 Payroll initiative should start early in the quarter." },
+    { id:"cc",   name:"CC",   full:"Cross-Cutting",             total:81,  support:62, supportPct:77, initiative:1,  weeklyRate:6.8, medianDays:1,  p85Days:3,   color:"#D4711A", light:"#FEF3E8",
+      components:"IT-WD Security, Tech-Reporting-WD, IT - Integrations, IT - Other",
+      note:"77% of Cross-Cutting capacity is support work - predominantly security access requests. Only 1 confirmed initiative ticket in Q2. Reserve Cross-Cutting capacity explicitly in every epic touching security, integrations, or reporting." },
+  ],
+
+  components: [
+    { lane:"hcm", laneColor:"#1F6E5C", laneLight:"#E8F5F0",
+      items:[
+        { name:"HR-Core HCM",         total:28, support:17, supportPct:61, initiative:5,  weekly:2.3, highSkilled:2, secSkilled:1, band:"Active",   note:"Business processes, I-9, onboarding. High support rate reflects ongoing BP maintenance." },
+        { name:"HR-Recruiting",        total:27, support:10, supportPct:37, initiative:4,  weekly:2.2, highSkilled:1, secSkilled:3, band:"Active",   note:"Offer letters, EIBs, compliance. Strong initiative activity in Q2." },
+        { name:"HR-Compensation",      total:23, support:8,  supportPct:35, initiative:10, weekly:1.9, highSkilled:1, secSkilled:3, band:"Active",   note:"Highest initiative count in HCM - 10 tickets. Merit cycle and comp plan config." },
+        { name:"HR-Talent Management", total:22, support:4,  supportPct:18, initiative:12, weekly:1.8, highSkilled:2, secSkilled:3, band:"Active",   note:"Performance reviews, calibration, SET observations. Lowest support rate in HCM." },
+        { name:"HR-Benefits",          total:3,  support:1,  supportPct:33, initiative:1,  weekly:0.2, highSkilled:2, secSkilled:0, band:"Moderate", note:"Low volume this quarter. Confirm resourcing before committing any Benefits initiative work." },
+      ]
+    },
+    { lane:"fin", laneColor:"#1F4E8C", laneLight:"#E8EEF8",
+      items:[
+        { name:"FIN-AP, Supplier & Invoicing",     total:16, support:8,  supportPct:50, initiative:1, weekly:1.3, highSkilled:1, secSkilled:0, band:"Active",   note:"Highest volume FIN component. AP and invoicing configuration." },
+        { name:"FIN-Financial Accounting and FDM", total:10, support:3,  supportPct:30, initiative:0, weekly:0.8, highSkilled:1, secSkilled:1, band:"Active",   note:"No confirmed initiative tickets in Q2. Work classified as support or Gray Zone." },
+        { name:"FIN-Overall Core Finance",         total:10, support:7,  supportPct:70, initiative:0, weekly:0.8, highSkilled:2, secSkilled:0, band:"Active",   note:"High support rate - primarily reactive Core Finance maintenance." },
+        { name:"FIN-Expenses",                     total:10, support:6,  supportPct:60, initiative:0, weekly:0.8, highSkilled:1, secSkilled:1, band:"Active",   note:"Expense report configurations. No initiative tickets in Q2." },
+        { name:"PR-Procurement/WSS",               total:9,  support:2,  supportPct:22, initiative:2, weekly:0.7, highSkilled:1, secSkilled:1, band:"Moderate", note:"2 initiative tickets - strongest initiative rate in FIN after AP." },
+        { name:"FIN-WD Adaptive",                  total:4,  support:0,  supportPct:0,  initiative:0, weekly:0.3, highSkilled:0, secSkilled:0, band:"Moderate", note:"Low volume. No specialist formally mapped. Confirm resourcing before committing." },
+        { name:"FIN-Customers",                    total:3,  support:2,  supportPct:67, initiative:0, weekly:0.2, highSkilled:0, secSkilled:0, band:"Moderate", note:"Insufficient data for confident forecasting." },
+        { name:"FIN-Supplier Accounts",            total:1,  support:0,  supportPct:0,  initiative:0, weekly:0.1, highSkilled:0, secSkilled:0, band:"Low",      note:"Insufficient data. Treat as unknown for Q3 planning." },
+        { name:"FIN-Projects & Assets",            total:1,  support:1,  supportPct:100,initiative:0, weekly:0.1, highSkilled:0, secSkilled:0, band:"Low",      note:"Insufficient data. Treat as unknown for Q3 planning." },
+      ]
+    },
+    { lane:"pay", laneColor:"#7B3F9E", laneLight:"#F0E8F8",
+      items:[
+        { name:"HR-Payroll",       total:10, support:2,  supportPct:20, initiative:3, weekly:0.8, highSkilled:2, secSkilled:3, band:"Active",   note:"3 initiative tickets. Low support rate reflects controlled Payroll intake." },
+        { name:"HR-Time Tracking", total:1,  support:0,  supportPct:0,  initiative:0, weekly:0.1, highSkilled:1, secSkilled:1, band:"Low",      note:"Near-zero Q2 volume. Confirm whether Time Tracking work is being tagged correctly." },
+      ]
+    },
+    { lane:"cc", laneColor:"#D4711A", laneLight:"#FEF3E8",
+      items:[
+        { name:"IT-WD Security",    total:67, support:50, supportPct:75, initiative:2, weekly:5.6, highSkilled:1, secSkilled:1, band:"Active",   note:"Dominant Cross-Cutting component. 75% support. Any initiative touching security should budget this separately." },
+        { name:"Tech-Reporting-WD", total:9,  support:5,  supportPct:56, initiative:1, weekly:0.8, highSkilled:1, secSkilled:0, band:"Moderate", note:"Flag any initiative requiring WD report builds at intake." },
+        { name:"IT - Integrations", total:8,  support:6,  supportPct:75, initiative:0, weekly:0.7, highSkilled:2, secSkilled:0, band:"Moderate", note:"No initiative tickets in Q2. Confirm resourcing for any Q3 integration work." },
+        { name:"IT - Other",        total:6,  support:4,  supportPct:67, initiative:0, weekly:0.5, highSkilled:1, secSkilled:0, band:"Moderate", note:"General IT requests. No initiative tickets in Q2." },
+      ]
+    },
+  ],
+
+  patterns: [
+    { name:"Security Access Request",  q2:47, median:1,  p85:9,   variability:"High",     structure:"Single ticket",    typical:"1",    countNote:"Each access request is 1 ticket. Batch security projects are a separate initiative - clarify at intake." },
+    { name:"Configuration Change",     q2:28, median:11, p85:40,  variability:"Moderate", structure:"Depends on scope", typical:"2-5",  countNote:"Standalone config change is 1 ticket. Initiative-level configuration generates 3-8. Ask at intake." },
+    { name:"Report / Dashboard",       q2:31, median:2,  p85:37,  variability:"High",     structure:"Depends on scope", typical:"1-13", countNote:"A single report build is 1 ticket. A reporting initiative can generate 10+. Clarify scope at intake." },
+    { name:"EIB / Mass Upload",        q2:18, median:9,  p85:30,  variability:"Moderate", structure:"Single ticket",    typical:"1-3",  countNote:"Simple upload is 1 ticket. Uploads requiring template build or error correction are 2-5." },
+    { name:"Compensation Change",      q2:12, median:1,  p85:14,  variability:"Moderate", structure:"Small cluster",    typical:"3",    countNote:"Merit cycle generates 3-7 tickets. One-off pay change is 1-2. Ask: annual cycle or individual?" },
+    { name:"Payroll Processing",       q2:10, median:2,  p85:28,  variability:"High",     structure:"Small cluster",    typical:"3",    countNote:"Payroll initiatives average 3 tickets. Support epics can reach 9." },
+    { name:"Data Correction / Fix",    q2:9,  median:4,  p85:28,  variability:"Moderate", structure:"Single ticket",    typical:"1-2",  countNote:"Most corrections are 1 ticket. Root cause issues can generate 2-4." },
+    { name:"Procurement / AP",         q2:9,  median:2,  p85:14,  variability:"Moderate", structure:"Small cluster",    typical:"5",    countNote:"Assessment-level work generated 5 tickets. Ongoing supplier maintenance is 1-2." },
+    { name:"I-9 Processing",           q2:7,  median:12, p85:28,  variability:"Moderate", structure:"Initiative",       typical:"5-9",  countNote:"Near-annual event. Generates 5-9 tickets. Use 7 as your planning baseline." },
+    { name:"Long-Duration Work",       q2:4,  median:90, p85:150, variability:"High",     structure:"Initiative",       typical:"1-3",  countNote:"Work that cannot be broken down due to Workday process structure or regulatory sequencing. Plan to P85 (150 BD). Flag at intake." },
+  ],
+};
+/* ================================================================
+   END OF QUARTERLY DATA
+   ================================================================ */
+
+const VAR  = { High:{bg:"#FDE8E8",color:"#8B1A1A",label:"High Variability"}, Moderate:{bg:"#FEF3DC",color:"#8B5E00",label:"Moderate"}, Consistent:{bg:"#E8F5EE",color:"#1A6B3A",label:"Consistent"} };
+const BAND = { Active:{color:"#1F6E5C",bg:"#E8F5F0"}, Moderate:{color:"#8B5E00",bg:"#FEF3DC"}, Low:{color:"#8B1A1A",bg:"#FDE8E8"} };
+const LANE_BY_ID = Object.fromEntries(DATA.lanes.map(l=>[l.id,l]));
+
+let activeTab     = "capacity";
+let openLane      = null;
+let forecastMode  = "lane";   // "lane" | "component"
+let laneInputs    = {};
+let compInputs    = {};
+
+function render() {
+  document.getElementById("app").innerHTML = buildApp();
+  attachEvents();
+}
+
+function buildApp() {
+  const tabs = ["capacity","components","forecast","patterns","sizing","concepts"];
+  const labels = {capacity:"Lane Capacity",components:"Component View",forecast:"Forecast Calculator",patterns:"Request Patterns",sizing:"Initiative Sizing",concepts:"Key Concepts"};
+  return `
+    <div class="header">
+      <div class="header-inner">
+        <div class="eyebrow">ERP / Workday — Center Employee Digital Ops</div>
+        <h1>Capacity Planning Guide</h1>
+        <p class="header-sub">Throughput-based capacity planning for ${DATA.quarterLabel}.
+        ${DATA.totalTickets} completed tickets across 12 weeks. Use ticket count estimates per lane or component - the data handles the rest.</p>
+      </div>
+    </div>
+    <div class="main">
+      <nav class="tab-nav">
+        ${tabs.map(t=>`<button class="tab-btn ${activeTab===t?'active':''}" data-tab="${t}">${labels[t]}</button>`).join('')}
+      </nav>
+      ${activeTab==="capacity"   ? buildCapacity()   : ""}
+      ${activeTab==="components" ? buildComponents() : ""}
+      ${activeTab==="forecast"   ? buildForecast()   : ""}
+      ${activeTab==="patterns"   ? buildPatterns()   : ""}
+      ${activeTab==="sizing"     ? buildSizing()     : ""}
+      ${activeTab==="concepts"   ? buildConcepts()   : ""}
+    </div>`;
+}
+
+/* ── LANE CAPACITY ────────────────────────────────── */
+function buildCapacity() {
+  const totalInit = DATA.lanes.reduce((s,l)=>s+l.initiative,0);
+  return `
+    <div class="section-title">Lane Capacity — ${DATA.quarterLabel}</div>
+    <p class="section-sub">Tap any lane to see lead time data and a planning note. Available initiative capacity is what remains after removing the support reserve.</p>
+    <div class="lane-cards">
+      ${DATA.lanes.map(lane=>{
+        const initPct = Math.round((lane.initiative/lane.total)*100);
+        const isOpen  = openLane===lane.id;
+        return `
+          <div class="lane-card" data-lane="${lane.id}">
+            <div class="lane-card-header" data-toggle="${lane.id}">
+              <div class="lane-icon" style="background:${lane.color}">${lane.name}</div>
+              <div class="lane-meta">
+                <div class="lane-name">${lane.full}</div>
+                <div class="lane-stats">
+                  <div class="stat-item"><span class="stat-label">Weekly Rate</span><span class="stat-value">${lane.weeklyRate}</span></div>
+                  <div class="stat-item"><span class="stat-label">Initiative Tickets Q2</span><span class="stat-value" style="color:${lane.color}">${lane.initiative}</span></div>
+                  <div class="stat-item"><span class="stat-label">Total Closed Q2</span><span class="stat-value">${lane.total}</span></div>
+                </div>
+                <div class="split-bar-wrap">
+                  <div class="split-bar-label"><span>Capacity split</span><span>${lane.supportPct}% support · ${initPct}% initiative</span></div>
+                  <div class="split-bar">
+                    <div style="width:${lane.supportPct}%;background:#CBD5E1;border-radius:4px"></div>
+                    <div style="width:${initPct}%;background:${lane.color};border-radius:4px"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="lane-card-body ${isOpen?'open':''}">
+              <div class="lead-time-grid">
+                <div class="lt-box" style="background:${lane.light}">
+                  <div class="lt-box-label">Median Lead Time</div>
+                  <div class="lt-box-value" style="color:${lane.color}">${lane.medianDays} <span>business days</span></div>
+                  <div class="lt-box-note">Half of work closes faster than this</div>
+                </div>
+                <div class="lt-box" style="background:${lane.light}">
+                  <div class="lt-box-label">P85 Lead Time (use for commitments)</div>
+                  <div class="lt-box-value" style="color:${lane.color}">${lane.p85Days} <span>business days</span></div>
+                  <div class="lt-box-note">85% of the time, work closes within this many days</div>
+                </div>
+              </div>
+              <div class="lane-components"><strong>Components:</strong> ${lane.components}</div>
+              <div class="lane-note" style="color:${lane.color}">${lane.note}</div>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>
+    <div class="summary-bar">
+      <div class="summary-main">
+        <div class="summary-label">Total Initiative Tickets — All Lanes Q2</div>
+        <div class="summary-value">${totalInit} tickets</div>
+        <div class="summary-breakdown">${DATA.totalTickets} total closed · ${DATA.totalTickets-totalInit} support reserve</div>
+      </div>
+      <div class="summary-note">${DATA.attributionNote}</div>
+    </div>`;
+}
+
+/* ── COMPONENT VIEW ───────────────────────────────── */
+function buildComponents() {
+  return `
+    <div class="section-title">Component View — ${DATA.quarterLabel}</div>
+    <div class="comp-intro">
+      This tab shows capacity at the component level - one step below the lane.
+      Use it to confirm which Workday module an initiative touches, how much capacity that component has,
+      and the depth of skill coverage available. Skill coverage shows the number of team members
+      with High or Secondary proficiency in each component.
+      Components roll up to their lane and reconcile to the Lane Capacity tab.
+    </div>
+    ${DATA.components.map(group=>{
+      const laneTotal  = group.items.reduce((s,c)=>s+c.total,0);
+      const laneInit   = group.items.reduce((s,c)=>s+c.initiative,0);
+      const laneWeekly = group.items.reduce((s,c)=>s+c.weekly,0).toFixed(1);
+      return `
+        <div class="comp-section">
+          <div class="comp-lane-header" style="background:${group.laneColor}">
+            <div class="comp-lane-badge">${LANE_BY_ID[group.lane]?.name||group.lane.toUpperCase()}</div>
+            <div class="comp-lane-info">
+              <div class="comp-lane-name">${LANE_BY_ID[group.lane]?.full||group.lane}</div>
+              <div class="comp-lane-stats">${laneTotal} tickets · ${laneInit} initiative · ${laneWeekly}/week combined</div>
+            </div>
+          </div>
+          <table class="comp-table">
+            <thead><tr>
+              <th style="width:26%">Component</th>
+              <th style="width:8%">Throughput</th>
+              <th style="width:9%">Support</th>
+              <th style="width:10%">Planned</th>
+              <th style="width:9%">Support %</th>
+              <th style="width:8%">Band</th>
+              <th style="width:22%">Skill Coverage</th>
+            </tr></thead>
+            <tbody>
+              ${group.items.map(comp=>{
+                const bs = BAND[comp.band]||BAND.Moderate;
+                const useWeekly  = comp.total >= 10;
+                const unit       = useWeekly ? "/wk" : "/qtr";
+                const totalDisp  = useWeekly ? Math.round(comp.weekly) + unit : comp.total + unit;
+                const suppTotal  = Math.round(comp.total * comp.supportPct / 100);
+                const initTotal  = comp.total - suppTotal;
+                const suppDisp   = useWeekly ? Math.round(comp.weekly * comp.supportPct / 100) + unit : suppTotal + unit;
+                const initDisp   = useWeekly ? Math.round(comp.weekly * (1 - comp.supportPct / 100)) + unit : initTotal + unit;
+                const highLabel = comp.highSkilled===1?"1 specialist (High)":comp.highSkilled>1?`${comp.highSkilled} specialists (High)`:"None mapped";
+                const secLabel  = comp.secSkilled>0?` · ${comp.secSkilled} secondary`:"";
+                const covLabel  = comp.highSkilled===0&&comp.secSkilled===0?"Not in skill map":highLabel+secLabel;
+                return `<tr>
+                  <td><div class="comp-name">${comp.name}</div><div class="comp-planning-note">${comp.note}</div></td>
+                  <td style="text-align:center;font-weight:700">${totalDisp}</td>
+                  <td style="text-align:center;color:#666">${suppDisp}</td>
+                  <td style="text-align:center;font-weight:700;color:${group.laneColor}">${initDisp}</td>
+                  <td style="text-align:center;color:#888;font-size:11px">${comp.supportPct}%</td>
+                  <td style="text-align:center">
+                    <span class="band-pill" style="background:${bs.bg};color:${bs.color}">${comp.band}</span>
+                  </td>
+                  <td><span class="coverage-count">${covLabel}</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }).join('')}`;
+}
+
+/* ── FORECAST CALCULATOR ──────────────────────────── */
+function buildForecast() {
+  return `
+    <div class="section-title">Forecast Calculator</div>
+    <p class="section-sub">Choose a mode. Lane mode gives a high-level capacity check by lane. Component mode lets you check capacity for specific Workday modules - useful when an initiative only touches one or two components within a lane.</p>
+    <div class="mode-toggle">
+      <button class="mode-btn ${forecastMode==='lane'?'active':''}" data-mode="lane">Lane-level forecast</button>
+      <button class="mode-btn ${forecastMode==='component'?'active':''}" data-mode="component">Component-level forecast</button>
+    </div>
+    ${forecastMode==="lane" ? buildLaneForecast() : buildComponentForecast()}`;
+}
+
+function buildLaneForecast() {
+  const W = DATA.planWeeks;
+  const results = DATA.lanes.map(lane=>{
+    const tickets = parseInt(laneInputs[lane.id]||0);
+    const gross   = Math.round(lane.weeklyRate*W);
+    const reserve = Math.round(gross*(lane.supportPct/100));
+    const avail   = gross-reserve;
+    const pct     = avail>0?Math.min(Math.round((tickets/avail)*100),200):0;
+    const weeks   = tickets>0&&(lane.weeklyRate*(1-lane.supportPct/100))>0?Math.ceil(tickets/(lane.weeklyRate*(1-lane.supportPct/100))):0;
+    let status,statusColor,cardBg,borderColor;
+    if(tickets===0)   {status="—";              statusColor="#999";    cardBg="#F8FAFB";borderColor="#CBD5E1";}
+    else if(pct<=80)  {status="Within capacity";statusColor="#1F6E5C";cardBg="#F0FAF6";borderColor="#1F6E5C";}
+    else if(pct<=100) {status="At capacity";    statusColor="#8B5E00";cardBg="#FEF9ED";borderColor="#C9A84C";}
+    else              {status="Over capacity";  statusColor="#8B1A1A";cardBg="#FEF0F0";borderColor="#C0392B";}
+    return {lane,tickets,gross,reserve,avail,pct,status,statusColor,cardBg,borderColor,weeks};
+  });
+  const anyInput = results.some(r=>r.tickets>0);
+  return `
+    <div class="calc-box">
+      <div class="calc-title">Lane-Level Forecast</div>
+      <p class="calc-sub">Enter estimated initiative ticket counts per lane. Based on ${W}-week planning ceiling and Q2 throughput rates.</p>
+      <div class="calc-inputs">
+        ${DATA.lanes.map(lane=>`
+          <div class="calc-field">
+            <label style="color:${lane.color}">${lane.full} (${lane.name})</label>
+            <input type="number" min="0" placeholder="0" data-lane-input="${lane.id}" value="${laneInputs[lane.id]||''}" />
+          </div>`).join('')}
+      </div>
+      <div class="calc-results">
+        ${anyInput?results.map(r=>`
+          <div class="result-card" style="background:${r.cardBg};border-left-color:${r.borderColor}">
+            <div class="result-top">
+              <div><span class="result-lane" style="color:${r.lane.color}">${r.lane.full}</span>
+              <span class="result-rate">${r.lane.weeklyRate}/wk · ${r.lane.supportPct}% support reserve</span></div>
+              <div class="result-status" style="color:${r.statusColor}">${r.status}</div>
+            </div>
+            <div class="result-metrics">
+              <div class="result-metric"><div class="label">Requested</div><div class="value">${r.tickets} <span>tickets</span></div></div>
+              <div class="result-metric"><div class="label">Available (${DATA.planWeeks} wks)</div><div class="value">${r.avail} <span>tickets</span></div></div>
+              ${r.tickets>0?`<div class="result-metric"><div class="label">Est. delivery</div><div class="value">${r.weeks} <span>wks</span></div></div>`:""}
+            </div>
+            ${r.tickets>0?`<div class="progress-track"><div class="progress-fill" style="width:${Math.min(r.pct,100)}%;background:${r.borderColor}"></div></div>`:""}
+          </div>`).join('')
+        :'<div class="calc-empty">Enter estimated ticket counts above to see capacity status.</div>'}
+      </div>
+    </div>`;
+}
+
+function buildComponentForecast() {
+  const W = DATA.planWeeks;
+  return `
+    <div class="comp-forecast-grid">
+      ${DATA.components.map(group=>{
+        const lane = LANE_BY_ID[group.lane];
+        if(!lane) return "";
+        const results = group.items.map(comp=>{
+          const key     = group.lane+"__"+comp.name;
+          const tickets = parseInt(compInputs[key]||0);
+          const avail   = Math.round(comp.weekly*W*(1-comp.supportPct/100));
+          const pct     = avail>0?Math.min(Math.round((tickets/avail)*100),200):0;
+          const weeks   = tickets>0&&comp.weekly*(1-comp.supportPct/100)>0?Math.ceil(tickets/(comp.weekly*(1-comp.supportPct/100))):0;
+          let status,statusColor,barColor;
+          if(tickets===0)   {status="—";              statusColor="#999";    barColor="#CBD5E1";}
+          else if(pct<=80)  {status="Within capacity";statusColor="#1F6E5C";barColor="#1F6E5C";}
+          else if(pct<=100) {status="At capacity";    statusColor="#8B5E00";barColor="#C9A84C";}
+          else              {status="Over capacity";  statusColor="#8B1A1A";barColor="#C0392B";}
+          return {comp,key,tickets,avail,pct,weeks,status,statusColor,barColor};
+        });
+        const laneTotal = results.reduce((s,r)=>s+r.tickets,0);
+        const laneAvail = results.reduce((s,r)=>s+r.avail,0);
+        return `
+          <div class="comp-forecast-section">
+            <div class="comp-forecast-lane-hdr" style="background:${lane.color}">
+              <div class="comp-forecast-lane-badge">${lane.name}</div>
+              <div class="comp-forecast-lane-name">${lane.full}</div>
+            </div>
+            <div class="comp-forecast-body">
+              <div class="comp-input-grid">
+                ${group.items.map(comp=>{
+                  const key=group.lane+"__"+comp.name;
+                  const bs=BAND[comp.band]||BAND.Moderate;
+                  return `
+                    <div class="comp-input-item">
+                      <label>${comp.name}</label>
+                      <div class="comp-meta">${comp.weekly}/wk · ${comp.supportPct}% support · <span class="band-pill" style="background:${bs.bg};color:${bs.color}">${comp.band}</span></div>
+                      <input type="number" min="0" placeholder="0" data-comp-input="${key}" value="${compInputs[key]||''}" />
+                    </div>`;
+                }).join('')}
+              </div>
+              ${results.some(r=>r.tickets>0)?`
+                <div style="margin-bottom:6px">
+                  ${results.filter(r=>r.tickets>0).map(r=>`
+                    <div class="comp-result-row" style="background:${r.statusColor==='#999'?'#F8FAFB':r.statusColor==='#1F6E5C'?'#F0FAF6':r.statusColor==='#8B5E00'?'#FEF9ED':'#FEF0F0'}">
+                      <div class="comp-result-name">${r.comp.name}</div>
+                      <div class="comp-result-bar-wrap">
+                        <div class="comp-result-bar-track">
+                          <div class="comp-result-bar-fill" style="width:${Math.min(r.pct,100)}%;background:${r.barColor}"></div>
+                        </div>
+                      </div>
+                      <div class="comp-result-stats">${r.tickets} of ${r.avail} avail${r.weeks>0?' · ~'+r.weeks+' wks':''}</div>
+                      <div class="comp-result-status" style="color:${r.statusColor}">${r.status}</div>
+                    </div>`).join('')}
+                </div>
+                <div class="comp-lane-total-row">
+                  <span>Lane total:</span>
+                  <span>${laneTotal} tickets requested</span>
+                  <span>${laneAvail} tickets available across entered components</span>
+                  ${laneTotal>laneAvail?`<span style="color:#8B1A1A">Over capacity by ${laneTotal-laneAvail} tickets</span>`:`<span style="color:#1F6E5C">${laneAvail-laneTotal} tickets remaining</span>`}
+                </div>`
+              :''}
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* ── REQUEST PATTERNS ─────────────────────────────── */
+function buildPatterns() {
+  return `
+    <div class="section-title">Request Patterns</div>
+    <p class="section-sub">Use this table when estimating ticket counts for the Forecast Calculator. Match the incoming epic to a pattern, then use the typical ticket count as your estimate. Lead times are Q2 2026 actuals.</p>
+    <table class="patterns-table">
+      <thead><tr><th>Request Type</th><th>Q2 Count</th><th>Median BD</th><th>P85 BD</th><th>Variability</th><th>Structure</th><th>Typical Tickets</th><th>Guidance</th></tr></thead>
+      <tbody>
+        ${DATA.patterns.map(p=>{
+          const v=VAR[p.variability]||VAR.Moderate;
+          return `<tr>
+            <td><strong>${p.name}</strong></td>
+            <td style="text-align:center">${p.q2}</td>
+            <td style="text-align:center">${p.median}</td>
+            <td style="text-align:center">${p.p85}</td>
+            <td><span class="var-pill" style="background:${v.bg};color:${v.color}">${v.label}</span></td>
+            <td style="font-size:11px">${p.structure}</td>
+            <td style="text-align:center;font-weight:700">${p.typical}</td>
+            <td style="font-size:11px">${p.countNote}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ── INITIATIVE SIZING ────────────────────────────── */
+function buildSizing() {
+  return `
+    <div class="section-title">Initiative Sizing Guide</div>
+    <p class="section-sub">Ticket count ranges by structure type. Use when a request does not match a named pattern in the Request Patterns tab.</p>
+    <table class="sizing-table">
+      <thead><tr><th>Structure Type</th><th>Ticket Range</th><th>When to Use</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Single ticket</strong></td><td>1</td><td>Standalone request with a defined scope. Security access, individual data fix, one-off config update.</td></tr>
+        <tr><td><strong>Small cluster</strong></td><td>2-9</td><td>Bounded initiative with known sub-steps. Compensation cycle, EIB with validation, payroll update.</td></tr>
+        <tr><td><strong>Initiative</strong></td><td>10+</td><td>Multi-component work with variable scope. Year End, I-9, new business process. Confirm scope before committing.</td></tr>
+        <tr><td><strong>Depends on scope</strong></td><td>1-15+</td><td>Could be a single ticket or a multi-week initiative. Clarify at intake before estimating.</td></tr>
+        <tr><td><strong>Long-duration work</strong></td><td>1-5 tickets, long lead time</td><td>Work that cannot be broken down due to Workday process structure or regulatory requirements. Plan to P85 (150 BD). Flag at intake.</td></tr>
+      </tbody>
+    </table>
+    <div class="sizing-note">
+      <strong>How to use the Forecast Calculator with this guide:</strong><br><br>
+      For each epic, identify the structure type and check the Request Patterns tab for a named match.
+      Enter ticket counts per lane in the Lane-Level Forecast, or per component in the Component-Level Forecast
+      if the initiative only touches specific Workday modules within a lane.
+      Commitments above available capacity need a resourcing conversation before acceptance.
+    </div>`;
+}
+
+/* ── KEY CONCEPTS ─────────────────────────────────── */
+function buildConcepts() {
+  const concepts=[
+    {title:"Why ticket count, not story points",body:"Story points measure estimated effort. Throughput measures what actually ships. This team moved away from story points because sprint velocity did not predict quarterly delivery. Ticket count per week - measured from actual closed tickets in Jira - is a more reliable planning input."},
+    {title:"What the support reserve means for planning",body:"Not all throughput is available for initiative work. In Q2, 40% of HCM tickets were reactive support work that arrives regardless of what is on the PI plan. That share must be reserved before accepting initiative commitments. Commitments should be made against available capacity only."},
+    {title:"Planned vs Support - what the split means",body:"Throughput is split two ways: Support (reactive work like maintenance, bug fixes, urgent requests) and Planned (committed initiative work). The Support % shows how much of that component's capacity is consumed by reactive work. The Planned column shows what remains available for PI commitments. If a component is 60% support, only 40% of its throughput can be promised to initiatives."},
+    {title:"Why we use P85, not the median, for commitments",body:"The median lead time is what typically happens. The P85 is what holds up when a date needs to be defensible - 85% of similar work closes within that many business days. Use P85 for any commitment with an external stakeholder or hard deadline."},
+    {title:"When to use component-level forecasting",body:"The lane-level forecast is the right starting point for most PI planning conversations. Switch to the component-level forecast when an initiative only touches one or two specific components within a lane - for example, an initiative that only touches HR-Compensation within HCM. The component rate (1.8/week) gives a much more accurate delivery estimate than the lane rate (7.8/week)."},
+    {title:"What skill coverage count tells you",body:"The Component View shows how many team members hold High or Secondary proficiency in each component. A component with only 1 High-proficiency specialist carries single-point-of-failure risk for any initiative commitment - absences or competing priorities can delay delivery. Use this as a signal to flag resourcing conversations early rather than discovering constraints mid-quarter."},
+    {title:"How to handle cross-component initiatives",body:"Some initiatives touch multiple components within or across lanes. Each component touched needs its own ticket count estimate and capacity check. Use the Component-Level Forecast to enter counts per component - the calculator shows the lane total at the bottom so you can see both the component-level and lane-level picture in one view."},
+    {title:"Gray Zone tickets and FIN uncertainty",body:"67 Q2 tickets completed without enough signal to classify as support or initiative. FIN has the highest Gray Zone count. Until those tickets are classified, FIN's initiative capacity number is a floor estimate, not a ceiling. Resolve Gray Zone classification before Q3 PI Planning."},
+  ];
+  return `
+    <div class="section-title">Key Concepts</div>
+    <p class="section-sub">How this model works and why each decision was made.</p>
+    <div class="concept-cards">
+      ${concepts.map(c=>`<div class="concept-card"><div class="concept-title">${c.title}</div><div class="concept-body">${c.body}</div></div>`).join('')}
+    </div>`;
+}
+
+/* ── EVENT BINDING ────────────────────────────────── */
+function attachEvents() {
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{activeTab=btn.dataset.tab;openLane=null;render();});
+  });
+  document.querySelectorAll("[data-toggle]").forEach(el=>{
+    el.addEventListener("click",()=>{const id=el.dataset.toggle;openLane=openLane===id?null:id;render();});
+  });
+  document.querySelectorAll("[data-mode]").forEach(btn=>{
+    btn.addEventListener("click",()=>{forecastMode=btn.dataset.mode;render();});
+  });
+  document.querySelectorAll("[data-lane-input]").forEach(inp=>{
+    inp.addEventListener("input",()=>{laneInputs[inp.dataset.laneInput]=inp.value;render();});
+  });
+  document.querySelectorAll("[data-comp-input]").forEach(inp=>{
+    inp.addEventListener("input",()=>{compInputs[inp.dataset.compInput]=inp.value;render();});
+  });
+}
+
+render();
+</script>
+</body>
+</html>
